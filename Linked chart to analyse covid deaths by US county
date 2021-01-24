@@ -1,0 +1,146 @@
+index.html
+
+
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Sun Nov 29 20:10:50 2020
+
+@author: siddharthgehlot
+"""
+
+<!DOCTYPE html>
+<head>
+    <meta charset="utf-8">
+    <meta name="description" content="">
+    <title>8.6 - Node-link diagrams</title>
+    <!-- Bootstrap Core CSS -->
+    <link rel="stylesheet" href="css/bootstrap.min.css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <nav class="navbar navbar-default"></nav>
+    <svg width="600" height="600"></svg>
+
+<script src="https://d3js.org/d3.v4.min.js"></script>
+
+<script>
+
+var width = 1500;
+var height = 1500;
+
+var svg = d3.select("body").append("svg")
+    .attr("width", width)
+    .attr("height", height);
+    
+ var color = d3.scaleOrdinal(d3.schemeCategory20);
+ var x = d3.scaleLinear()
+ .domain([100,5000])
+ .range([5,10])
+
+ var simulation = d3.forceSimulation()
+                  .force("center", d3.forceCenter(width / 2, height / 2))
+                   .force("charge", d3.forceManyBody().strength(function(d){return d.Total_deaths+d.COVID19Deaths>40000?100:-100})
+                   .distanceMin(100).distanceMax(150))
+        .force("collide", d3.forceCollide(5).strength(0.1))
+        .force("link", d3.forceLink().id(function(d) { return d.state; }));
+
+d3.csv("data/data.csv", function(error, links) {
+  if (error) throw error;
+
+  var nodesByName = {};
+  var nodesByState ={};
+  var nodesByCounty ={};
+  // Create nodes for each unique source and target.
+  links.forEach(function(link) {
+    link.source = nodeByNameState(link.State,link.Total_deaths);
+    console.log(link.source);
+    link.target = nodeByNameCounty(link.State,link.CountyName,link.COVID19Deaths);
+  });
+
+  // Extract the array of nodes from the map by name.
+  nodesByName =Object.assign({},nodesByState,nodesByCounty) 
+  var nodes = d3.values(nodesByName);
+  
+   function nodeByNameState(name,deaths) {
+    return nodesByState[name] || (nodesByState[name] = {state: name, name: name,deaths: deaths });
+  }
+  function nodeByNameCounty(state,name,deaths) {
+    return nodesByCounty[name] || (nodesByCounty[name] = {state: state, name: state +" "+name,deaths: deaths });
+  }
+  
+   var link = svg.append("g")
+            .attr("class", "links")
+            .selectAll("line")
+            .data(links)
+            .enter().append("line")
+            .style("stroke", 'black')
+           // .attr("stroke-length", function(d) { return Math.sqrt(d.Total_deaths/200); });
+        console.log(link)
+                
+                
+   var node = svg.append("g")
+            .attr("class", "nodes")
+            .selectAll("circle")
+            .data(nodes)
+            .enter().append("circle")
+                .attr("r", (d)=>x(d.deaths))
+                .attr("fill", (d) => color(d.state))
+                .attr("text",(d)=>d.state)
+                .call(d3.drag()
+                    .on("start", dragstarted)
+                    .on("drag", dragged)
+                    .on("end", dragended)
+                );              
+
+// Basic tooltips
+        node.append("title")
+            .text(function(d) { return "name: "+ d.name +"; No. of deaths "+ d.deaths; });
+            
+ simulation
+            .nodes(nodes)
+            .on("tick", ticked);
+            
+simulation.force("link")
+            .links(links)
+            
+
+ function ticked() {
+            link
+                .attr("x1", function(d) { return d.source.x; })
+                .attr("y1", function(d) { return d.source.y; })
+                .attr("x2", function(d) { return d.target.x; })
+                .attr("y2", function(d) { return d.target.y; });
+
+            node
+                .attr("cx", function(d) { return d.x; })
+                .attr("cy", function(d) { return d.y; });
+        }
+    });
+
+ // Change the value of alpha, so things move around when we drag a node
+    function dragstarted(d) {
+    if (!d3.event.active) simulation.alphaTarget(0.7).restart();
+        d.fx = d.x;
+        d.fy = d.y;
+    }
+
+    // Fix the position of the node that we are looking at
+    function dragged(d) {
+        d.fx = d3.event.x;
+        d.fy = d3.event.y;
+    }
+
+    // Let the node do what it wants again once we've looked at it
+    function dragended(d) {
+    if (!d3.event.active) simulation.alphaTarget(0);
+        d.fx = null;
+        d.fy = null;
+    }
+
+</script>
+</body>
+
+
